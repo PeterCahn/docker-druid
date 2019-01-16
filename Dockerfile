@@ -64,7 +64,7 @@ WORKDIR /tmp/druid/examples
 
 ADD /examples/meetup.csv /var/meetup.csv 
 ADD /examples/ingest-csv.json quickstart/turorial/ingest-csv.json
-RUN  apt-get install -y curl \
+RUN  apt-get update; apt-get install -y curl \
   && curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/wikipedia-index.json http://localhost:8081/druid/indexer/v1/task \
   && curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/ingest-csv.json http://localhost:8081/druid/indexer/v1/task
 
