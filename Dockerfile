@@ -11,8 +11,10 @@ RUN apt-get update \
       && apt-add-repository -y ppa:webupd8team/java \
       && apt-get purge --auto-remove -y software-properties-common \
       && apt-get update \
-      && echo oracle-java-8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections \
-      && apt-get install -y oracle-java8-installer oracle-java8-set-default
+      && echo oracle-java-8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections
+
+RUN apt-get install -y default-jdk wget \
+      && javac -version
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get install -y mysql-server \
@@ -47,8 +49,8 @@ WORKDIR /tmp/druid
 
 # package and install Druid locally
 # use versions-maven-plugin 2.1 to work around https://jira.codehaus.org/browse/MVERSIONS-285
-RUN mvn -e -X -U -B org.codehaus.mojo:versions-maven-plugin:2.1:set -DgenerateBackupPoms=false -DnewVersion=$DRUID_VERSION \
-  && mvn -U -B install  -DskipTests=true -Dmaven.javadoc.skip=true \
+RUN mvn -U -B org.codehaus.mojo:versions-maven-plugin:2.1:set -DgenerateBackupPoms=false -DnewVersion=$DRUID_VERSION \
+  && mvn -U -B install -DskipTests=true -Dmaven.javadoc.skip=true \
   && cp services/target/druid-services-$DRUID_VERSION-selfcontained.jar /usr/local/druid/lib \
   && cp -r /root/.m2/repository/org/apache/druid/extensions /usr/local/druid/ \
   && cp /root/.m2/repository/org/apache/druid/extensions/mysql-metadata-storage/0.13.0-incubating/mysql-metadata-storage-0.13.0-incubating.jar /usr/local/druid/extensions/mysql-metadata-storage/ \
