@@ -62,11 +62,9 @@ RUN mvn -U -B org.codehaus.mojo:versions-maven-plugin:2.1:set -DgenerateBackupPo
 
 WORKDIR /tmp/druid/examples
 
+# Add sample files
 ADD /examples/meetup.csv /var/meetup.csv 
 ADD /examples/ingest-csv.json quickstart/turorial/ingest-csv.json
-RUN  apt-get update; apt-get install -y curl \
-  && curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/wikipedia-index.json http://localhost:8081/druid/indexer/v1/task \
-  && curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/tutorial/ingest-csv.json http://localhost:8081/druid/indexer/v1/task
 
 # Setup supervisord
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
