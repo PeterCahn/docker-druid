@@ -7,19 +7,8 @@ ENV ZOOKEEPER_VERSION 3.4.10
 
 # Java 8
 RUN apt-get update \
-      && apt-get install -y software-properties-common \
-      && apt-add-repository -y ppa:webupd8team/java \
-      && apt-get purge --auto-remove -y software-properties-common \
-      && apt-get update \
-      && echo oracle-java-8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections
-
-RUN apt-get install -y default-jdk wget \
-      && javac -version
-
-ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get install -y mysql-server \
-                            supervisor \
-                            git \
+      && apt-get install -y git wget default-jdk \
+      && javac -version \
       && apt-get clean \
       && rm -rf /var/cache/oracle-jdk8-installer \
       && rm -rf /var/lib/apt/lists/*
@@ -28,11 +17,6 @@ RUN apt-get install -y mysql-server \
 RUN wget -q -O - http://archive.apache.org/dist/maven/maven-3/3.6.0/binaries/apache-maven-3.6.0-bin.tar.gz | tar -xzf - -C /usr/local \
       && ln -s /usr/local/apache-maven-3.6.0 /usr/local/apache-maven \
       && ln -s /usr/local/apache-maven/bin/mvn /usr/local/bin/mvn
-
-# Zookeeper
-RUN wget -q -O - http://www.us.apache.org/dist/zookeeper/zookeeper-$ZOOKEEPER_VERSION/zookeeper-$ZOOKEEPER_VERSION.tar.gz | tar -xzf - -C /usr/local \
-      && cp /usr/local/zookeeper-$ZOOKEEPER_VERSION/conf/zoo_sample.cfg /usr/local/zookeeper-$ZOOKEEPER_VERSION/conf/zoo.cfg \
-      && ln -s /usr/local/zookeeper-$ZOOKEEPER_VERSION /usr/local/zookeeper
 
 # Druid system user
 RUN adduser --system --group --no-create-home druid \
@@ -63,11 +47,13 @@ RUN mvn -U -B org.codehaus.mojo:versions-maven-plugin:2.1:set -DgenerateBackupPo
 WORKDIR /tmp/druid/examples
 
 # Add sample files
-ADD /examples/meetup.csv /var/meetup.csv 
-ADD /examples/ingest-csv.json quickstart/turorial/ingest-csv.json
+#ADD /examples/meetup.csv /var/meetup.csv 
+#ADD /examples/ingest-csv.json quickstart/turorial/ingest-csv.json
 
 # Setup supervisord
-ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+#ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+ADD docker-entrypoint.sh /docker-entrypoint.sh
 
 # Expose ports:
 # - 8081: HTTP (coordinator)
@@ -77,11 +63,11 @@ ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # - 3306: MySQL
 # - 2181 2888 3888: ZooKeeper
 EXPOSE 8081
-EXPOSE 8082
-EXPOSE 8083
-EXPOSE 8090
-EXPOSE 3306
-EXPOSE 2181 2888 3888
 
-WORKDIR /var/lib/druid
-ENTRYPOINT export HOSTIP="$(resolveip -s $HOSTNAME)" && find /var/lib/mysql -type f -exec touch {} \; && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+RUN mkdir -p /opt/druid/coordinator/conf && chown -R druid:druid /opt/druid/
+
+VOLUME ["/opt/druid/coordinator/conf"]
+
+WORKDIR /tmp/druid/examples
+
+ENTRYPOINT ["/docker-entrypoint.sh"]

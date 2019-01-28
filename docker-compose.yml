@@ -1,0 +1,88 @@
+version: "2"
+services:
+
+  zookeeper:
+    container_name: zookeeper
+    image: zookeeper
+    ports:
+      - 2181:2181
+      - 2188:2188
+      - 3888:3888
+    network_mode: host      
+
+  coordinator:
+    container_name: coordinator
+    image: druid:coordinator
+    build: ./coordinator
+    environment:
+      - DRUID_XMX=1g
+      - DRUID_XMS=1g
+      - DRUID_MAXNEWSIZE=250m
+      - DRUID_NEWSIZE=250m
+    network_mode: host
+    ports:
+       - 8081:8081
+    volumes:
+       - ./coordinator/conf:/opt/druid/coordinator/conf
+    depends_on:
+       - mysql
+       - zookeeper
+    command:
+      - coordinator
+
+  historical:
+    container_name: historical
+    image: druid:historical
+    build: ./historical
+    environment:
+      - DRUID_XMX=1g
+      - DRUID_XMS=1g
+      - DRUID_MAXNEWSIZE=250m
+      - DRUID_NEWSIZE=250m
+    network_mode: host
+    ports:
+       - 8083:8083
+    volumes:
+       - ./historical/conf:/opt/druid/historical/conf
+    depends_on:
+       - mysql
+       - zookeeper
+    command:
+      - historical
+
+  broker:
+    container_name: broker
+    image: druid:broker
+    build: ./broker
+    environment:
+      - DRUID_XMX=1g
+      - DRUID_XMS=1g
+      - DRUID_MAXNEWSIZE=250m
+      - DRUID_NEWSIZE=250m
+    network_mode: host
+    ports:
+       - 8082:8082
+    volumes:
+       - ./broker/conf:/opt/druid/broker/conf
+    depends_on:
+       - mysql
+       - zookeeper
+       - coordinator
+    command:
+      - broker
+
+  mysql:
+    container_name: mysql
+    image: mysql:5.7
+    environment:
+      - MYSQL_ROOT_PASSWORD=my-secret-pw
+      - MYSQL_DATABASE=druid
+      - MYSQL_USER=druid
+      - MYSQL_PASSWORD=my-secret-pw
+    network_mode: host
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+    ports:
+      - 3306:3306
+
+

@@ -1,0 +1,73 @@
+FROM ubuntu:16.04
+
+# Set version and github repo which you want to build from
+ENV GITHUB_OWNER druid-io
+ENV DRUID_VERSION 0.13.0-incubating
+ENV ZOOKEEPER_VERSION 3.4.10
+
+# Java 8
+RUN apt-get update \
+      && apt-get install -y git wget default-jdk \
+      && javac -version \
+      && apt-get clean \
+      && rm -rf /var/cache/oracle-jdk8-installer \
+      && rm -rf /var/lib/apt/lists/*
+
+# Maven
+RUN wget -q -O - http://archive.apache.org/dist/maven/maven-3/3.6.0/binaries/apache-maven-3.6.0-bin.tar.gz | tar -xzf - -C /usr/local \
+      && ln -s /usr/local/apache-maven-3.6.0 /usr/local/apache-maven \
+      && ln -s /usr/local/apache-maven/bin/mvn /usr/local/bin/mvn
+
+# Druid system user
+RUN adduser --system --group --no-create-home druid \
+      && mkdir -p /var/lib/druid \
+      && chown druid:druid /var/lib/druid
+
+# Druid (from source)
+RUN mkdir -p /usr/local/druid/lib
+
+# trigger rebuild only if branch changed
+ADD https://api.github.com/repos/$GITHUB_OWNER/druid/git/refs/heads/$DRUID_VERSION druid-version.json
+RUN git clone -q --branch $DRUID_VERSION --depth 1 https://github.com/$GITHUB_OWNER/druid.git /tmp/druid
+WORKDIR /tmp/druid
+
+# package and install Druid locally
+# use versions-maven-plugin 2.1 to work around https://jira.codehaus.org/browse/MVERSIONS-285
+RUN mvn -U -B org.codehaus.mojo:versions-maven-plugin:2.1:set -DgenerateBackupPoms=false -DnewVersion=$DRUID_VERSION \
+  && mvn -U -B install -DskipTests=true -Dmaven.javadoc.skip=true \
+  && cp services/target/druid-services-$DRUID_VERSION-selfcontained.jar /usr/local/druid/lib \
+  && cp -r /root/.m2/repository/org/apache/druid/extensions /usr/local/druid/ \
+  && cp /root/.m2/repository/org/apache/druid/extensions/mysql-metadata-storage/0.13.0-incubating/mysql-metadata-storage-0.13.0-incubating.jar /usr/local/druid/extensions/mysql-metadata-storage/ \
+  && cp /root/.m2/repository/mysql/mysql-connector-java/5.1.38/mysql-connector-java-5.1.38.jar /usr/local/druid/extensions/mysql-metadata-storage/ \
+  && ls -latr /usr/local/druid/extensions/mysql-metadata-storage \
+  && cp -r /root/.m2/repository/org/apache/hadoop/hadoop-client /usr/local/druid/hadoop-dependencies \
+  && apt-get purge --auto-remove -y git \
+  && apt-get clean 
+
+WORKDIR /tmp/druid/examples
+
+# Add sample files
+#ADD /examples/meetup.csv /var/meetup.csv 
+#ADD /examples/ingest-csv.json quickstart/turorial/ingest-csv.json
+
+# Setup supervisord
+#ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+ADD docker-entrypoint.sh /docker-entrypoint.sh
+
+# Expose ports:
+# - 8081: HTTP (coordinator)
+# - 8082: HTTP (broker)
+# - 8083: HTTP (historical)
+# - 8090: HTTP (overlord)
+# - 3306: MySQL
+# - 2181 2888 3888: ZooKeeper
+EXPOSE 8083
+
+RUN mkdir -p /opt/druid/historical/conf && chown -R druid:druid /opt/druid/
+
+VOLUME ["/opt/druid/historical/conf"]
+
+WORKDIR /tmp/druid/examples
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
