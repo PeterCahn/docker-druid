@@ -60,6 +60,10 @@ RUN mvn -U -B org.codehaus.mojo:versions-maven-plugin:2.1:set -DgenerateBackupPo
   && apt-get purge --auto-remove -y git \
   && apt-get clean 
 
+RUN find /var/lib/mysql -type f -exec touch {} \; \
+      && /etc/init.d/mysql start \
+      && mysql -u root -e "GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd'; CREATE database druid CHARACTER SET utf8;"
+
 WORKDIR /tmp/druid/examples
 
 # Add sample files
