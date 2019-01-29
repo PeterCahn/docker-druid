@@ -1,11 +1,14 @@
 #!/bin/bash
 set -e
 
+mkdir -p /opt/druid/conf
+chown -R druid:druid /opt/druid/
+
 # are we running as debug?
 if [[ -n "$DEBUG" ]]; then
  set -x
- sed -ri 's/WARN/DEBUG/g' /opt/druid/$1/conf/_common/log4j2.xml
- sed -ri 's/warn/debug/g' /opt/druid/$1/conf/_common/log4j2.xml
+ sed -ri 's/WARN/DEBUG/g' /opt/druid/conf/_common/log4j2.xml
+ sed -ri 's/warn/debug/g' /opt/druid/conf/_common/log4j2.xml
 fi
 
 # Run as broker if needed
@@ -21,37 +24,37 @@ if [[ -e /druid.env ]]; then
 fi
 
 #if [ "$DRUID_XMX" != "-" ]; then
-#    sed -ri 's/Xmx.*/Xmx'${DRUID_XMX}'/g' /opt/druid/$1/conf/jvm.config
+#    sed -ri 's/Xmx.*/Xmx'${DRUID_XMX}'/g' /opt/druid/conf/jvm.config
 #fi
 
 #if [ "$DRUID_XMS" != "-" ]; then
-#    sed -ri 's/Xms.*/Xms'${DRUID_XMS}'/g' /opt/druid/$1/conf/jvm.config
+#    sed -ri 's/Xms.*/Xms'${DRUID_XMS}'/g' /opt/druid/conf/jvm.config
 #fi
 
 if [ "$DRUID_NEWSIZE" != "-" ]; then
-    sed -ri 's/NewSize=.*/NewSize='${DRUID_NEWSIZE}'/g' /opt/druid/$1/conf/jvm.config
+    sed -ri 's/NewSize=.*/NewSize='${DRUID_NEWSIZE}'/g' /opt/druid/conf/jvm.config
 fi
 
 if [ "$DRUID_MAXNEWSIZE" != "-" ]; then
-    sed -ri 's/MaxNewSize=.*/MaxNewSize='${DRUID_MAXNEWSIZE}'/g' /opt/druid/$1/conf/jvm.config
+    sed -ri 's/MaxNewSize=.*/MaxNewSize='${DRUID_MAXNEWSIZE}'/g' /opt/druid/conf/jvm.config
 fi
 
 #if [ "$DRUID_LOGLEVEL" != "-" ]; then
-#    sed -ri 's/druid.emitter.logging.logLevel=.*/druid.emitter.logging.logLevel='${DRUID_LOGLEVEL}'/g' /opt/druid/$1/conf/_common/common.runtime.properties
+#    sed -ri 's/druid.emitter.logging.logLevel=.*/druid.emitter.logging.logLevel='${DRUID_LOGLEVEL}'/g' /opt/druid/conf/_common/common.runtime.properties
 #fi
 
 if [ "$DRUID_USE_CONTAINER_IP" != "-" ]; then
     ipaddress=`ip a|grep "global eth0"|awk '{print $2}'|awk -F '\/' '{print $1}'`
-    sed -ri 's/druid.host=.*/druid.host='${ipaddress}'/g' /opt/druid/$1/conf/runtime.properties
+    sed -ri 's/druid.host=.*/druid.host='${ipaddress}'/g' /opt/druid/conf/runtime.properties
 fi
 if [ "$DRUID_HOSTNAME" != "-" ]; then
-    sed -ri 's/druid.host=.*/druid.host='${DRUID_HOSTNAME}'/g' /opt/druid/$1/conf/runtime.properties
+    sed -ri 's/druid.host=.*/druid.host='${DRUID_HOSTNAME}'/g' /opt/druid/conf/runtime.properties
 fi
 
 
 if [[ -n "$DRUID_EXTENSIONS" ]]; then
   finalList='"'$(echo $DRUID_EXTENSIONS | sed 's/,/", "/g' | sed 's/^+//g')'"'
-  confFile=/opt/druid/$1/conf/_common/common.runtime.properties
+  confFile=/opt/druid/conf/_common/common.runtime.properties
   # did it start with + ?
   if [[ $DRUID_EXTENSIONS == +* ]]; then
     sed -i "s|\(druid.extensions.loadList=.*\)]|\1, ${finalList}]|g" $confFile
@@ -76,17 +79,8 @@ fi
 
 
 export HOSTIP="$(resolveip -s $HOSTNAME)"
-echo "$@ ip modificato2: $HOSTIP"
-echo "1) cat ======================================"
-#cat /opt/druid/$1/conf/jvm.config | xargs -d '\n'
-#echo "envVars: ${envVars}"
-#echo "propVars: ${propVars}"
-#echo "2) echo $() ================================="
-#echo $(cat /opt/druid/$1/conf/jvm.config | xargs -d '\n')
-#echo "3) virgolette ==============================="
 
-# This is working with coordinator
-#java `cat /opt/druid/$1/conf/jvm.config | xargs -d '\n'` ${envVars} ${propVars} -cp /opt/druid/$1/conf/_common:/opt/druid/$1/conf/:/usr/local/druid/lib/* org.apache.druid.cli.Main server $@
-java $(cat /opt/druid/$1/conf/jvm.config | xargs) ${envVars} ${propVars} -cp /opt/druid/$1/conf/_common:/opt/druid/$1/conf/:/usr/local/druid/lib/* org.apache.druid.cli.Main server $@
+java $(cat /opt/druid/conf/jvm.config | xargs) ${envVars} ${propVars} -cp /opt/druid/conf/_common:/opt/druid/conf/:/usr/local/druid/lib/* org.apache.druid.cli.Main server $@
+
 
 

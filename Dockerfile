@@ -42,31 +42,13 @@ RUN mvn -U -B org.codehaus.mojo:versions-maven-plugin:2.1:set -DgenerateBackupPo
   && ls -latr /usr/local/druid/extensions/mysql-metadata-storage \
   && cp -r /root/.m2/repository/org/apache/hadoop/hadoop-client /usr/local/druid/hadoop-dependencies \
   && apt-get purge --auto-remove -y git \
-  && apt-get clean 
-
-WORKDIR /tmp/druid/examples
-
-# Add sample files
-#ADD /examples/meetup.csv /var/meetup.csv 
-#ADD /examples/ingest-csv.json quickstart/turorial/ingest-csv.json
-
-# Setup supervisord
-#ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+  && apt-get clean \
+  && mkdir -p /opt/druid/conf \
+  && chown -R druid:druid /opt/druid/
 
 ADD docker-entrypoint.sh /docker-entrypoint.sh
 
-# Expose ports:
-# - 8081: HTTP (coordinator)
-# - 8082: HTTP (broker)
-# - 8083: HTTP (historical)
-# - 8090: HTTP (overlord)
-# - 3306: MySQL
-# - 2181 2888 3888: ZooKeeper
-EXPOSE 8081
-
-RUN mkdir -p /opt/druid/coordinator/conf && chown -R druid:druid /opt/druid/
-
-VOLUME ["/opt/druid/coordinator/conf"]
+VOLUME ["/opt/druid/conf"]
 
 WORKDIR /tmp/druid/examples
 
